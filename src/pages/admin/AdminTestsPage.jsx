@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { createTest, listTests, resetTests } from "../../services/testService";
+import { scenarios } from "../../config/scenarios";
 
 export default function AdminTestsPage() {
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
 
   // Create form
   const [contact, setContact] = useState("");
-  const [clientType, setClientType] = useState("walkin");
-  const [deliveryMethod, setDeliveryMethod] = useState("pickup");
+  const [scenario, setScenario] = useState("walkin");
 
   // Create success state
   const [created, setCreated] = useState(null); // { trackingId }
@@ -21,11 +21,18 @@ export default function AdminTestsPage() {
     return listTests();
   }, [refreshKey]);
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return tests;
-    return tests.filter((t) => t.trackingId.toLowerCase().includes(s));
-  }, [q, tests]);
+  const filteredTests = useMemo(() => {
+    return tests.filter(
+      (t) =>
+        t.trackingId.toLowerCase().includes(search.toLowerCase()) ||
+        t.serialNumber?.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [tests, search]);
+  // const filtered = useMemo(() => {
+  //   const s = q.trim().toLowerCase();
+  //   if (!s) return tests;
+  //   return tests.filter((t) => t.trackingId.toLowerCase().includes(s));
+  // }, [q, tests]);
 
   function handleReset() {
     resetTests();
@@ -41,8 +48,7 @@ export default function AdminTestsPage() {
     setShowNew(false);
     setCreated(null);
     setContact("");
-    setClientType("walkin");
-    setDeliveryMethod("pickup");
+    setScenario("walkin");
   }
 
   function handleCreate(e) {
@@ -50,7 +56,7 @@ export default function AdminTestsPage() {
 
     if (!contact.trim()) return;
 
-    const res = createTest({ contact, clientType, deliveryMethod });
+    const res = createTest({ contact, scenario });
 
     if (res.ok) {
       setCreated({ trackingId: res.test.trackingId });
@@ -96,8 +102,8 @@ export default function AdminTestsPage() {
 
         <div className="mt-4">
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by Tracking ID..."
             className="w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
           />
@@ -111,9 +117,9 @@ export default function AdminTestsPage() {
             <thead className="text-slate-500">
               <tr className="border-b">
                 <th className="py-3 pr-3">Tracking ID</th>
-                <th className="py-3 pr-3">Type</th>
-                <th className="py-3 pr-3">Sample</th>
-                <th className="py-3 pr-3">Lab</th>
+                <th className="py-3 pr-3">Client Type</th>
+                <th className="py-3 pr-3">Step</th>
+                <th className="py-3 pr-3">Last Updated</th>
                 <th className="py-3 pr-3">Result</th>
                 <th className="py-3 pr-3">Delivery</th>
                 <th className="py-3 pr-3">Action</th>
@@ -121,34 +127,63 @@ export default function AdminTestsPage() {
             </thead>
 
             <tbody>
-              {filtered.map((t) => (
-                <tr key={t.trackingId} className="border-b last:border-b-0">
-                  <td className="py-3 pr-3 font-semibold">{t.trackingId}</td>
-                  <td className="py-3 pr-3">{t.clientType}</td>
-                  <td className="py-3 pr-3">{t.sampleStatus}</td>
-                  <td className="py-3 pr-3">{t.labStatus}</td>
-                  <td className="py-3 pr-3">{t.resultStatus}</td>
-                  <td className="py-3 pr-3">{t.deliveryMethod}</td>
-                  <td className="py-3 pr-3">
-                    <Link
-                      to={`/admin/tests/${encodeURIComponent(t.trackingId)}`}
-                      className="rounded-lg border px-3 py-1.5 hover:bg-slate-50"
-                    >
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {filteredTests.map((t) => {
+                const scenario = scenarios[t.scenario] || {};
+                const stepLabel = scenario.steps?.[t.currentStep] || "—";
 
-              {filtered.length === 0 && (
-                <tr>
-                  <td className="py-6 text-slate-500" colSpan={7}>
-                    No tests found.
-                  </td>
-                </tr>
-              )}
+                const resultStatus =
+                  t.currentStep >= (scenario.steps?.length || 1) - 1
+                    ? "Ready"
+                    : "Not ready";
+
+                return (
+                  <tr key={t.trackingId} className="border-t">
+                    <td className="py-3 font-medium">{t.trackingId}</td>
+
+                    <td>{scenario.name || "—"}</td>
+
+                    <td>
+                      Step {t.currentStep + 1}
+                      <div className="text-xs text-slate-500">{stepLabel}</div>
+                    </td>
+
+                    <td className="py-3 pr-3">
+                      {t.updatedAt
+                        ? new Date(t.updatedAt).toLocaleDateString()
+                        : "—"}
+                    </td>
+
+                    <td>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full
+            ${
+              resultStatus === "Ready"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
+                      >
+                        {resultStatus}
+                      </span>
+                    </td>
+
+                    <td>Email</td>
+
+                    <td>
+                      <Link
+                        to={`/admin/tests/${t.trackingId}`}
+                        className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50"
+                      >
+                        Edit
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          {filteredTests.length === 0 && (
+            <p className="text-sm text-gray-500 mt-4">No tests found.</p>
+          )}
         </div>
       </div>
 
@@ -202,8 +237,7 @@ export default function AdminTestsPage() {
                   onClick={() => {
                     setCreated(null);
                     setContact("");
-                    setClientType("walkin");
-                    setDeliveryMethod("pickup");
+                    setScenario("walkin");
                   }}
                   className="w-full rounded-xl border px-4 py-3 text-sm font-medium hover:bg-slate-50"
                   type="button"
@@ -234,33 +268,24 @@ export default function AdminTestsPage() {
                   </p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium">Client Type</label>
-                    <select
-                      value={clientType}
-                      onChange={(e) => setClientType(e.target.value)}
-                      className="mt-2 w-full rounded-xl border px-4 py-3"
-                    >
-                      <option value="walkin">walkin</option>
-                      <option value="kit">kit</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="text-sm font-medium">Scenario</label>
 
-                  <div>
-                    <label className="text-sm font-medium">
-                      Delivery Method
-                    </label>
-                    <select
-                      value={deliveryMethod}
-                      onChange={(e) => setDeliveryMethod(e.target.value)}
-                      className="mt-2 w-full rounded-xl border px-4 py-3"
-                    >
-                      <option value="pickup">pickup</option>
-                      <option value="shipped">shipped</option>
-                      <option value="email">email</option>
-                    </select>
-                  </div>
+                  <select
+                    value={scenario}
+                    onChange={(e) => setScenario(e.target.value)}
+                    className="mt-2 w-full rounded-xl border px-4 py-3"
+                  >
+                    <option value="walkin">Walk-In Client</option>
+                    <option value="walkin_kit_pickup">
+                      Walk-In Client – Kit Pickup
+                    </option>
+                    <option value="home_service">Home Service Client</option>
+                    <option value="kit_delivery">Kit Delivery Client</option>
+                    <option value="partner_collection">
+                      Sample Collection Center
+                    </option>
+                  </select>
                 </div>
 
                 <div className="flex gap-2">

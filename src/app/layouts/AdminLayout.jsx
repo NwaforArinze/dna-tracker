@@ -1,13 +1,13 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
-import { logout } from "../../services/authService";
+import { Outlet, Link } from "react-router-dom";
+// import { logout } from "../../services/authService";
 
 export default function AdminLayout() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  function handleLogout() {
-    logout();
-    navigate("/admin/login");
-  }
+  // function handleLogout() {
+  //   logout();
+  //   navigate("/admin/login");
+  // }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -22,13 +22,13 @@ export default function AdminLayout() {
             <Link to="/admin/tests" className="hover:underline">
               Tests
             </Link>
-            <button
+            {/* <button
               onClick={handleLogout}
               className="rounded-lg border px-3 py-1.5 hover:bg-slate-100"
               type="button"
             >
               Logout
-            </button>
+            </button> */}
           </nav>
         </div>
       </header>

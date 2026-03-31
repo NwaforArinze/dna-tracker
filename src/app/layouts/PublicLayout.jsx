@@ -25,8 +25,13 @@ export default function PublicLayout() {
 
       <footer className="border-t bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 text-sm text-slate-600">
-          <span>Privacy • Terms</span>
-          <span>Support: +234 XXX XXX XXXX</span>
+          <span>© 2026 Smart DNA. All rights reserved.</span>
+          <span>
+            Get in Touch:{" "}
+            <a href="mailto:care@smartdna.com.ng" className="hover:underline">
+              care@smartdna.com.ng
+            </a>
+          </span>
         </div>
       </footer>
     </div>

@@ -67,15 +67,18 @@ export function findTestByTrackingId(trackingId) {
 }
 
 // This is what the public tracking page uses
-export function trackLookup(trackingId, contact) {
-  const test = findTestByTrackingId(trackingId);
-  if (!test) return { ok: false, error: "Tracking ID not found." };
+export function trackLookup(trackingId, serialNumber) {
+  const tests = readAll();
 
-  const input = normalizeContact(contact);
-  const saved = normalizeContact(test.contact);
+  const test = tests.find(
+    (t) =>
+      t.trackingId.toLowerCase() === trackingId.toLowerCase() &&
+      t.serialNumber?.toLowerCase() === serialNumber.toLowerCase(),
+  );
 
-  if (input !== saved)
-    return { ok: false, error: "Details do not match our records." };
+  if (!test) {
+    return { ok: false, error: "Invalid Tracking ID or Serial Number" };
+  }
 
   return { ok: true, test };
 }
@@ -86,11 +89,8 @@ export function createTest(payload) {
   const newTest = {
     trackingId: payload.trackingId || generateUniqueTrackingId(),
     contact: normalizeContact(payload.contact),
-    clientType: payload.clientType || "walkin",
-    sampleStatus: payload.sampleStatus || "pending",
-    labStatus: payload.labStatus || "queued",
-    resultStatus: payload.resultStatus || "not_ready",
-    deliveryMethod: payload.deliveryMethod || "pickup",
+    scenario: payload.scenario || "walkin",
+    currentStep: 0,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -103,23 +103,40 @@ export function createTest(payload) {
 
 export function updateTest(trackingId, updates) {
   const all = readAll();
-  const id = String(trackingId || "")
-    .trim()
-    .toLowerCase();
 
-  const idx = all.findIndex((t) => t.trackingId.toLowerCase() === id);
-  if (idx === -1) return { ok: false, error: "Test not found." };
+  const idx = all.findIndex((t) => t.trackingId === trackingId);
+  if (idx === -1) return { ok: false };
+
+  const existing = all[idx];
+
+  // clone timestamps array safely
+  let stepTimestamps = existing.stepTimestamps || [];
+
+  // detect step change
+  if (
+    updates.currentStep !== undefined &&
+    updates.currentStep > existing.currentStep
+  ) {
+    const stepIndex = updates.currentStep;
+
+    // ensure array length
+    if (!stepTimestamps.length) {
+      stepTimestamps = [];
+    }
+
+    // record timestamp for that step
+    stepTimestamps[stepIndex] = Date.now();
+  }
 
   all[idx] = {
-    ...all[idx],
+    ...existing,
     ...updates,
-    contact: updates.contact
-      ? normalizeContact(updates.contact)
-      : all[idx].contact,
+    stepTimestamps,
     updatedAt: Date.now(),
   };
 
   writeAll(all);
+
   return { ok: true, test: all[idx] };
 }
 

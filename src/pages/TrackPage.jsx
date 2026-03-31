@@ -6,14 +6,14 @@ export default function TrackPage() {
   const navigate = useNavigate();
 
   const [trackingId, setTrackingId] = useState("");
-  const [contact, setContact] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
   const [error, setError] = useState("");
 
   function onSubmit(e) {
     e.preventDefault();
     setError("");
 
-    const res = trackLookup(trackingId, contact);
+    const res = trackLookup(trackingId, serialNumber);
 
     if (!res.ok) {
       setError(res.error);
@@ -25,7 +25,7 @@ export default function TrackPage() {
       "dna_last_verified",
       JSON.stringify({
         trackingId: String(trackingId || "").trim(),
-        contact: String(contact || "").trim(),
+        serialNumber: String(serialNumber || "").trim(),
       }),
     );
 
@@ -48,17 +48,17 @@ export default function TrackPage() {
             <input
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
-              placeholder="e.g. DNA-7X4P9LQ"
+              placeholder="Enter Tracking ID"
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Phone or Email</label>
+            <label className="text-sm font-medium">Serial Number</label>
             <input
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="e.g. 0803... or name@email.com"
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+              placeholder="Enter Serial Number"
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
             />
           </div>
@@ -89,11 +89,11 @@ export default function TrackPage() {
         <ul className="mt-2 list-disc pl-5">
           <li>
             Tracking ID: <span className="font-medium">DNA-7X4P9LQ</span> •
-            Contact: <span className="font-medium">08031234567</span>
+            Serial Number: <span className="font-medium">SMAXXXX</span>
           </li>
           <li>
             Tracking ID: <span className="font-medium">DNA-2M7Q4T1</span> •
-            Contact: <span className="font-medium">client@email.com</span>
+            Serial Number: <span className="font-medium">SMAXXXX</span>
           </li>
         </ul>
       </div>

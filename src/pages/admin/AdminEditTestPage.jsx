@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { scenarios } from "../../config/scenarios";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { findTestByTrackingId, updateTest } from "../../services/testService";
 
@@ -16,10 +17,16 @@ export default function AdminEditTestPage() {
     if (!existing) return null;
 
     return {
-      contact: existing.contact || "",
+      serialNumber: existing.serialNumber || "",
+
+      // NEW SYSTEM
+      scenario: existing.scenario || existing.clientType || "walkin",
+      currentStep: existing.currentStep ?? 0,
+
+      // OLD SYSTEM (kept temporarily so nothing breaks)
       clientType: existing.clientType || "walkin",
       sampleStatus: existing.sampleStatus || "pending",
-      labStatus: existing.labStatus || "queued",
+      labStatus: existing.labStatus || "processing",
       resultStatus: existing.resultStatus || "not_ready",
       deliveryMethod: existing.deliveryMethod || "pickup",
     };
@@ -27,6 +34,10 @@ export default function AdminEditTestPage() {
 
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+
+  const scenarioKey = form?.scenario || "walkin";
+  const scenario = scenarios[scenarioKey];
+  const steps = scenario?.steps || [];
 
   if (!existing || !form) {
     return (
@@ -60,13 +71,24 @@ export default function AdminEditTestPage() {
     setMsg("");
     setError("");
 
-    if (!form.contact.trim()) {
-      setError("Contact (phone/email) is required.");
+    if (!form.serialNumber?.trim()) {
+      setError("Serial Number is required.");
+      return;
+    }
+
+    if (!form.serialNumber.startsWith("SMA")) {
+      setError("Serial number must start with SMA");
       return;
     }
 
     const res = updateTest(existing.trackingId, {
-      contact: form.contact,
+      serialNumber: form.serialNumber,
+
+      // NEW SYSTEM
+      scenario: form.scenario,
+      currentStep: form.currentStep,
+
+      // OLD SYSTEM (temporary compatibility)
       clientType: form.clientType,
       sampleStatus: form.sampleStatus,
       labStatus: form.labStatus,
@@ -144,16 +166,60 @@ export default function AdminEditTestPage() {
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="text-sm font-medium">Client Phone or Email</label>
+            <label className="text-sm font-medium">Serial Number</label>
             <input
-              value={form.contact}
-              onChange={(e) => setField("contact", e.target.value)}
+              value={form.serialNumber}
+              onChange={(e) => setField("serialNumber", e.target.value)}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
-              placeholder="e.g. 0803... or name@email.com"
+              placeholder="SMAXXXX"
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 ">
               Client must enter this exact value when tracking.
             </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Scenario</label>
+
+            <select
+              value={form.scenario}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  scenario: e.target.value,
+                  currentStep: 0,
+                })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            >
+              <option value="walkin">Walk-In Client</option>
+              <option value="walkin_kit_pickup">
+                Walk-In Client – Kit Pickup
+              </option>
+              <option value="home_service">Home Service Client</option>
+              <option value="kit_delivery">Kit Delivery Client</option>
+              <option value="partner_collection">
+                Sample Collection Center
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Current Status</label>
+
+            <select
+              value={form.currentStep}
+              onChange={(e) =>
+                setForm({ ...form, currentStep: Number(e.target.value) })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            >
+              {steps.map((step, index) => (
+                <option key={index} value={index}>
+                  {index + 1} — {step}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -201,7 +267,6 @@ export default function AdminEditTestPage() {
               onChange={(e) => setField("labStatus", e.target.value)}
               className="mt-2 w-full rounded-xl border px-4 py-3"
             >
-              <option value="queued">queued</option>
               <option value="processing">processing</option>
               <option value="completed">completed</option>
             </select>

@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { scenarios } from "../config/scenarios";
 import { trackLookup } from "../services/testService";
 import StatusTimeline from "../components/StatusTimeline";
 
@@ -9,7 +10,7 @@ export default function StatusPage() {
   const session = JSON.parse(
     sessionStorage.getItem("dna_last_verified") || "null",
   );
-  const contact = session?.contact || "";
+  const serialNumber = session?.serialNumber || "";
 
   if (
     !session ||
@@ -19,8 +20,8 @@ export default function StatusPage() {
       <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">Verification required</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Please go to the tracking page and verify your Tracking ID and contact
-          details.
+          Please go to the tracking page and verify your Tracking ID and Serial
+          Number details.
         </p>
         <Link
           to="/track"
@@ -32,7 +33,7 @@ export default function StatusPage() {
     );
   }
 
-  const res = trackLookup(trackingId, contact);
+  const res = trackLookup(trackingId, serialNumber);
 
   if (!res.ok) {
     return (
@@ -53,6 +54,9 @@ export default function StatusPage() {
 
   const t = res.test;
 
+  const scenarioKey = t.scenario || t.clientType || "walkin";
+  const scenario = scenarios[scenarioKey];
+
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
@@ -65,12 +69,12 @@ export default function StatusPage() {
           </div>
           <div>
             <span className="text-slate-500">Client Type:</span>{" "}
-            <span className="font-semibold">{t.clientType}</span>
+            <span className="font-semibold">{scenario.name}</span>
           </div>
-          <div>
+          {/* <div>
             <span className="text-slate-500">Delivery Method:</span>{" "}
             <span className="font-semibold">{t.deliveryMethod}</span>
-          </div>
+          </div> */}
         </div>
       </div>
 

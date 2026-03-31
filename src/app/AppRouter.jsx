@@ -6,11 +6,11 @@ import AdminLayout from "./layouts/AdminLayout";
 import TrackPage from "../pages/TrackPage";
 import StatusPage from "../pages/StatusPage";
 
-import AdminLoginPage from "../pages/admin/AdminLoginPage";
+// import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import AdminTestsPage from "../pages/admin/AdminTestsPage";
 import AdminEditTestPage from "../pages/admin/AdminEditTestPage";
 
-import ProtectedRoute from "../components/ProtectedRoute";
+// import ProtectedRoute from "../components/ProtectedRoute";
 
 export default function AppRouter() {
   return (
@@ -24,14 +24,14 @@ export default function AppRouter() {
         </Route>
 
         {/* ADMIN LOGIN (public page) */}
-        <Route path="/admin/login" element={<AdminLoginPage />} />
+        {/* <Route path="/admin/login" element={<AdminLoginPage />} /> */}
 
         {/* ADMIN (protected) */}
         <Route
           element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
+            // <ProtectedRoute>
+            <AdminLayout />
+            // </ProtectedRoute>
           }
         >
           <Route

@@ -1,3 +1,5 @@
+import { scenarios } from "../config/scenarios";
+
 function Badge({ kind, children }) {
   const styles =
     kind === "done"
@@ -82,109 +84,130 @@ function StepItem({ title, description, state, index, isLast }) {
 }
 
 export default function StatusTimeline({ test }) {
-  const isWalkin = test.clientType === "walkin";
+  const scenarioKey = test.scenario || test.clientType || "walkin";
+  const scenario = scenarios[scenarioKey];
+  if (!scenario) {
+    return (
+      <div className="p-6 bg-red-100 rounded-lg">Unknown tracking scenario</div>
+    );
+  }
 
-  // same progress rules as before
-  const registeredDone = true;
-  const sampleDone =
-    test.sampleStatus === "collected" || test.sampleStatus === "received";
-  const processingDone =
-    test.labStatus === "processing" || test.labStatus === "completed";
-  const completedDone = test.labStatus === "completed";
-  const resultReadyDone =
-    test.resultStatus === "ready" || test.resultStatus === "released";
+  const steps = scenario.steps;
 
-  // Determine current step:
-  // - first step that is NOT done becomes "current"
-  const doneFlags = [
-    registeredDone,
-    sampleDone,
-    processingDone,
-    completedDone,
-    resultReadyDone,
-  ];
-  const currentIndex = Math.max(
-    0,
-    doneFlags.findIndex((x) => x === false),
-  ); // -1 means all done
+  const currentStep = Number(test.currentStep ?? 0);
 
-  const steps = [
-    {
-      title: "Registered",
-      description: "Your test has been created in our system.",
-      done: registeredDone,
-    },
-    {
-      title: isWalkin ? "Sample Collected" : "Sample Received",
-      description: isWalkin
-        ? "Your sample has been collected at the center."
-        : "We have received your sample at the center.",
-      done: sampleDone,
-    },
-    {
-      title: "Processing",
-      description: "Your sample is currently being processed in the lab.",
-      done: processingDone,
-    },
-    {
-      title: "Processing Completed",
-      description: "Lab processing is completed.",
-      done: completedDone,
-    },
-    {
-      title: "Result Ready",
-      description: resultReadyDone
-        ? `Your result is ready. Delivery method: ${test.deliveryMethod}.`
-        : "Not ready yet.",
-      done: resultReadyDone,
-    },
-  ];
+  const timestamps = [...(test.stepTimestamps || [])];
+
+  // Auto-fill missing timestamps for completed steps
+  for (let i = 0; i < currentStep; i++) {
+    if (!timestamps[i]) {
+      timestamps[i] = (test.createdAt || Date.now()) + i * 1000 * 60 * 60; // +1hr per step
+    }
+  }
+
+  const progress = Math.min(
+    100,
+    Math.round((currentStep / (steps.length - 1)) * 100),
+  );
 
   return (
-    <div className="rounded-2xl border bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Progress</h2>
-          <p className="text-sm text-slate-600">
-            Track the current stage of your test.
-          </p>
+    <div className="bg-white rounded-2xl shadow-sm border p-6">
+      {/* Title */}
+      <h2 className="text-xl font-bold mb-6">{scenario.name} Tracking</h2>
+
+      {currentStep === steps.length - 1 && (
+        <div className="mb-4 rounded-xl bg-green-50 p-3 text-green-700 ring-1 ring-green-200">
+          Test process completed
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between text-sm mb-1">
+          <span>Progress</span>
+          <span>{progress}%</span>
         </div>
 
-        {/* Overall badge */}
-        <div>
-          {resultReadyDone ? (
-            <Badge kind="done">Result Ready</Badge>
-          ) : processingDone ? (
-            <Badge kind="current">Processing</Badge>
-          ) : (
-            <Badge kind="todo">In review</Badge>
-          )}
+        <div className="w-full bg-gray-200 h-2 rounded-full">
+          <div
+            className="bg-blue-600 h-2 rounded-full transition-all"
+            style={{ width: `${progress}%` }}
+          ></div>
         </div>
       </div>
 
-      <div className="mt-6">
-        {steps.map((s, i) => {
-          let state = "todo";
-          if (s.done) state = "done";
-          else if (currentIndex === -1 ? false : i === currentIndex)
-            state = "current";
+      {/* Timeline */}
+      <div className="space-y-0">
+        {steps.map((step, index) => {
+          let state = "pending";
 
-          // if all done, none should be "current"
-          if (currentIndex === -1) state = s.done ? "done" : "todo";
+          const isFinalStep = currentStep >= steps.length - 1;
+
+          if (isFinalStep) {
+            // Everything is completed when last step reached
+            state = "completed";
+          } else {
+            if (index < currentStep) {
+              state = "completed";
+            } else if (index === currentStep) {
+              state = "current";
+            }
+          }
+
+          const isLast = index === steps.length - 1;
 
           return (
-            <StepItem
-              key={s.title}
-              title={s.title}
-              description={s.description}
-              state={state}
-              index={i + 1}
-              isLast={i === steps.length - 1}
-            />
+            <div key={index} className="flex gap-4 relative pb-8">
+              {/* LEFT SIDE (ICON + CONNECTOR) */}
+              <div className="flex flex-col items-center">
+                {/* ICON */}
+                <div
+                  className={`h-9 w-9 flex items-center justify-center rounded-full text-sm font-bold
+            ${state === "completed" ? "bg-green-600 text-white" : ""}
+            ${state === "current" ? "bg-blue-600 text-white animate-pulse" : ""}
+            ${state === "pending" ? "bg-gray-200 text-gray-600" : ""}
+            `}
+                >
+                  {state === "completed" ? "✓" : index + 1}
+                </div>
+
+                {/* CONNECTOR LINE */}
+                {!isLast && (
+                  <div
+                    className={`w-px flex-1 mt-2 ${
+                      state === "completed" ? "bg-green-300" : "bg-gray-200"
+                    }`}
+                    style={{ minHeight: 30 }}
+                  />
+                )}
+              </div>
+
+              {/* RIGHT SIDE CONTENT */}
+              <div className="flex-1">
+                <p className="font-medium">{step}</p>
+
+                {timestamps[index] && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(timestamps[index]).toLocaleString()}
+                  </p>
+                )}
+
+                {state === "completed" && (
+                  <p className="text-sm text-green-600">Completed</p>
+                )}
+
+                {state === "current" && (
+                  <p className="text-sm text-blue-600">In progress</p>
+                )}
+
+                {state === "pending" && (
+                  <p className="text-sm text-gray-400">Pending</p>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
-
       <div className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 ring-1 ring-slate-200">
         This portal shows status only. For privacy, it does not display the
         actual DNA result.
