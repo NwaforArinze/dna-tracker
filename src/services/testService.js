@@ -2,7 +2,6 @@ import { seedTests } from "../data/seed";
 
 const STORAGE_KEY = "dna_tests_v1";
 
-// --- Helpers ---
 function normalizeContact(value) {
   return String(value || "")
     .trim()

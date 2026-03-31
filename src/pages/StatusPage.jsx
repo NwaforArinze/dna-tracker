@@ -6,7 +6,6 @@ import StatusTimeline from "../components/StatusTimeline";
 export default function StatusPage() {
   const { trackingId } = useParams();
 
-  // We require that user came from TrackPage (verified)
   const session = JSON.parse(
     sessionStorage.getItem("dna_last_verified") || "null",
   );

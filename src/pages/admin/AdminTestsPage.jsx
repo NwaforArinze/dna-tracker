@@ -251,7 +251,6 @@ export default function AdminTestsPage() {
                 </p>
               </div>
             ) : (
-              /* CREATE FORM VIEW */
               <form onSubmit={handleCreate} className="mt-6 space-y-4">
                 <div>
                   <label className="text-sm font-medium">
