@@ -24,7 +24,7 @@ export default function PublicLayout() {
       </main>
 
       <footer className="border-t bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 text-sm text-slate-600">
+        <div className="mx-auto flex gap-3 md:gap-0 flex-col md:flex-row max-w-5xl items-center justify-between px-4 py-4 text-sm text-slate-600">
           <span>© 2026 Smart DNA. All rights reserved.</span>
           <span>
             Get in Touch:{" "}

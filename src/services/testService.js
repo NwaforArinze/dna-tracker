@@ -37,7 +37,7 @@ function randomString(length = 7) {
 }
 
 function generateTrackingId() {
-  return `DNA-${randomString(7)}`;
+  return `DNA${randomString(7)}`;
 }
 
 // Generates a unique ID by checking existing storage
@@ -66,17 +66,15 @@ export function findTestByTrackingId(trackingId) {
 }
 
 // This is what the public tracking page uses
-export function trackLookup(trackingId, serialNumber) {
+export function trackLookup(trackingId) {
   const tests = readAll();
 
   const test = tests.find(
-    (t) =>
-      t.trackingId.toLowerCase() === trackingId.toLowerCase() &&
-      t.serialNumber?.toLowerCase() === serialNumber.toLowerCase(),
+    (t) => t.trackingId.toLowerCase() === trackingId.toLowerCase(),
   );
 
   if (!test) {
-    return { ok: false, error: "Invalid Tracking ID or Serial Number" };
+    return { ok: false, error: "Invalid Tracking ID" };
   }
 
   return { ok: true, test };

@@ -3,7 +3,7 @@ export const scenarios = {
     name: "Walk-In Client",
     steps: [
       "Appointment scheduled",
-      "forms completed",
+      "Forms completed",
       "Payment confirmed",
       "Sample collected",
       "Internal QC completed",
@@ -11,8 +11,7 @@ export const scenarios = {
       "Sample received by laboratory",
       "Laboratory analysis in progress",
       "Laboratory analysis completed",
-      "Result sent to client email",
-      "Client notified of result delivery",
+      "Result sent to provided email",
     ],
   },
 
@@ -29,8 +28,7 @@ export const scenarios = {
       "Sample received by laboratory",
       "Laboratory analysis in progress",
       "Laboratory analysis completed",
-      "Result sent to client email",
-      "Client notified of result delivery",
+      "Result sent to provided email",
     ],
   },
 
@@ -45,8 +43,7 @@ export const scenarios = {
       "Sample received by laboratory",
       "Laboratory analysis in progress",
       "Laboratory analysis completed",
-      "Result sent to client email",
-      "Client notified of result delivery",
+      "Result sent to provided email",
     ],
   },
 
@@ -64,8 +61,7 @@ export const scenarios = {
       "Sample received by laboratory",
       "Laboratory analysis in progress",
       "Laboratory analysis completed",
-      "Result sent to client email",
-      "Client notified of result delivery",
+      "Result sent to provided email",
     ],
   },
 
@@ -83,8 +79,7 @@ export const scenarios = {
       "Sample received by laboratory",
       "Laboratory analysis in progress",
       "Laboratory analysis completed",
-      "Result sent to client email",
-      "Client notified of result delivery",
+      "Result sent to provided email",
     ],
   },
 };

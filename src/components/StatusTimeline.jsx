@@ -111,10 +111,7 @@ export default function StatusTimeline({ test }) {
   );
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border p-6">
-      {/* Title */}
-      <h2 className="text-xl font-bold mb-6">{scenario.name} Tracking</h2>
-
+    <div className="bg-white rounded-2xl shadow-sm border p-8">
       {currentStep === steps.length - 1 && (
         <div className="mb-4 rounded-xl bg-green-50 p-3 text-green-700 ring-1 ring-green-200">
           Test process completed
