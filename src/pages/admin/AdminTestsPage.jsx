@@ -113,7 +113,7 @@ export default function AdminTestsPage() {
       {/* Table */}
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="overflow-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="text-slate-500">
               <tr className="border-b">
                 <th className="py-3 pr-3">Tracking ID</th>

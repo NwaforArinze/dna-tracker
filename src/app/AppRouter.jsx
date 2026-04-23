@@ -18,8 +18,7 @@ export default function AppRouter() {
       <Routes>
         {/* PUBLIC */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Navigate to="/track" replace />} />
-          <Route path="/track" element={<TrackPage />} />
+          <Route path="/" element={<TrackPage />} />
           <Route path="/status/:trackingId" element={<StatusPage />} />
         </Route>
 

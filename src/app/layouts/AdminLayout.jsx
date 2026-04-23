@@ -45,7 +45,7 @@ export default function AdminLayout() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <Link to="/admin/tests" className="text-lg font-bold flex ">
             <img src="/smartdnalogo.webp" width={100} alt="" />
             <span className="text-slate-500">• Admin</span>
@@ -65,12 +65,12 @@ export default function AdminLayout() {
         </div>
       </header>
 
-      <main className="flex-1 mx-auto max-w-5xl px-4 py-8">
+      <main className="flex-1 mx-auto max-w-7xl px-4 py-8">
         <Outlet />
       </main>
 
       <footer className="border-t bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 text-sm text-slate-600">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 text-sm text-slate-600">
           <span>Admin only</span>
           <span>© DNA Center</span>
         </div>
