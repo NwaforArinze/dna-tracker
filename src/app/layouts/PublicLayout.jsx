@@ -5,7 +5,7 @@ export default function PublicLayout() {
     <div className=" flex min-h-screen flex-col bg-slate-50">
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <Link to="/track" className="text-lg font-bold">
+          <Link to="/" className="text-lg font-bold">
             <img src="/smartdnalogo.webp" width={150} alt="" />
           </Link>
           {/* <nav className="flex items-center gap-4 text-sm">
