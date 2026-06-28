@@ -44,7 +44,6 @@ export default function AppRouter() {
           />
         </Route>
 
-        {/* NOT FOUND */}
         <Route
           path="*"
           element={

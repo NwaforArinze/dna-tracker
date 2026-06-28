@@ -17,14 +17,12 @@ export default function AdminLayout() {
 
       const timeLeft = session.expiresAt - Date.now();
 
-      // If already expired
       if (timeLeft <= 0) {
         logout();
         navigate("/admin/login");
         return;
       }
 
-      // Set auto logout timer
       const timer = setTimeout(() => {
         logout();
         alert("Session expired. Please login again.");

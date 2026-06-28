@@ -8,14 +8,6 @@ export default function PublicLayout() {
           <Link to="/" className="text-lg font-bold">
             <img src="/smartdnalogo.webp" width={150} alt="" />
           </Link>
-          {/* <nav className="flex items-center gap-4 text-sm">
-            <Link to="/track" className="hover:underline">
-              Track
-            </Link>
-            <Link to="/admin/login" className="hover:underline">
-              Admin
-            </Link>
-          </nav> */}
         </div>
       </header>
 

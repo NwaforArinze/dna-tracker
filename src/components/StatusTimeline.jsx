@@ -47,7 +47,6 @@ function IconCircle({ state, index }) {
 function StepItem({ title, description, state, index, isLast }) {
   return (
     <div className="relative flex gap-4">
-      {/* Left: icon + connector line */}
       <div className="relative flex flex-col items-center">
         <IconCircle state={state} index={index} />
 
@@ -61,7 +60,6 @@ function StepItem({ title, description, state, index, isLast }) {
         )}
       </div>
 
-      {/* Right: content */}
       <div className="w-full pb-6">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -97,11 +95,11 @@ export default function StatusTimeline({ test }) {
   const currentStep = Number(test.currentStep ?? 0);
 
   const timestamps = [...(test.stepTimestamps || [])];
+  const baseTimestamp = test.createdAt ?? null;
 
-  // Auto-fill missing timestamps for completed steps
   for (let i = 0; i < currentStep; i++) {
-    if (!timestamps[i]) {
-      timestamps[i] = (test.createdAt || Date.now()) + i * 1000 * 60 * 60; // +1hr per step
+    if (!timestamps[i] && baseTimestamp !== null) {
+      timestamps[i] = baseTimestamp + i * 1000 * 60 * 60; // +1hr per step
     }
   }
 
@@ -141,7 +139,6 @@ export default function StatusTimeline({ test }) {
           const isFinalStep = currentStep >= steps.length - 1;
 
           if (isFinalStep) {
-            // Everything is completed when last step reached
             state = "completed";
           } else {
             if (index < currentStep) {

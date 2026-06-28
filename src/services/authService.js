@@ -1,65 +1,47 @@
-const AUTH_KEY = "dna_admin_auth";
+import { apiRequest } from "./api";
 
-// const ADMIN = {
-//   email: "admin@dnacenter.com",
-//   password: "admin123",
-// };
-function encode(value) {
-  return btoa(value);
-}
+export async function adminLogin(email, password) {
+  const response = await apiRequest("/auth/admin/signin", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
 
-const ADMIN = {
-  email: import.meta.env.VITE_ADMIN_EMAIL || "",
-  password: import.meta.env.VITE_ADMIN_PASSWORD || "",
-};
+  if (response.status === "success") {
+    localStorage.setItem("dna_token", response.token);
 
-export function login(email, password) {
-  if (!email || !password) {
-    return { ok: false, error: "All fields are required" };
-  }
+    localStorage.setItem("dna_admin", JSON.stringify(response.data));
 
-  if (
-    email.toLowerCase().trim() === ADMIN.email.toLowerCase().trim() &&
-    encode(password) === ADMIN.password
-  ) {
-    const SESSION_DURATION = 1000 * 60 * 60; // 1 hour
-
-    const session = {
-      isAuth: true,
-      expiresAt: Date.now() + SESSION_DURATION,
+    return {
+      ok: true,
+      user: response.data,
     };
-
-    localStorage.setItem("dna_admin_auth", JSON.stringify(session));
-    return { ok: true };
   }
 
-  return { ok: false, error: "Invalid credentials" };
+  return {
+    ok: false,
+    error: response.message,
+  };
 }
-
 export function logout() {
-  try {
-    localStorage.removeItem("dna_admin_auth");
-  } catch (err) {
-    console.error("Logout error:", err);
-  }
+  localStorage.removeItem("dna_token");
+  localStorage.removeItem("dna_admin");
 }
 
 export function isAuthenticated() {
-  const raw = localStorage.getItem(AUTH_KEY);
+  return !!localStorage.getItem("dna_token");
+}
 
-  if (!raw) return false;
+export function getCurrentUser() {
+  const raw = localStorage.getItem("dna_admin");
+
+  if (!raw) return null;
 
   try {
-    const session = JSON.parse(raw);
-
-    // If expired → logout
-    if (Date.now() > session.expiresAt) {
-      localStorage.removeItem(AUTH_KEY);
-      return false;
-    }
-
-    return session.isAuth === true;
+    return JSON.parse(raw);
   } catch {
-    return false;
+    return null;
   }
 }

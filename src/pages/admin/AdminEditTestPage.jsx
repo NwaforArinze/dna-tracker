@@ -1,56 +1,86 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { scenarios } from "../../config/scenarios";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { findTestByTrackingId, updateTest } from "../../services/testService";
+import { getOrderById, updateOrderTracking } from "../../services/testService";
+import { buildStatus, API_TO_SCENARIO_MAP } from "../../config/apiScenarios";
 
 export default function AdminEditTestPage() {
   const { trackingId } = useParams();
   const navigate = useNavigate();
 
-  // Load the test from localStorage “DB”
-  const existing = useMemo(
-    () => findTestByTrackingId(trackingId),
-    [trackingId],
-  );
-
-  const [form, setForm] = useState(() => {
-    if (!existing) return null;
-
-    return {
-      serialNumber: existing.serialNumber || "",
-
-      // NEW SYSTEM
-      scenario: existing.scenario || existing.clientType || "walkin",
-      currentStep: existing.currentStep ?? 0,
-
-      // OLD SYSTEM (kept temporarily so nothing breaks)
-      clientType: existing.clientType || "walkin",
-      sampleStatus: existing.sampleStatus || "pending",
-      labStatus: existing.labStatus || "processing",
-      resultStatus: existing.resultStatus || "not_ready",
-      deliveryMethod: existing.deliveryMethod || "pickup",
-    };
-  });
-
+  const [existing, setExisting] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function loadOrder() {
+      try {
+        const res = await getOrderById(trackingId);
+
+        if (res.status !== "success") {
+          setError(res.message || "Unable to load order.");
+          return;
+        }
+
+        const order = res.data;
+        setExisting(order);
+
+        setForm({
+          scenario: API_TO_SCENARIO_MAP[order.client_type] || "walkin",
+
+          currentStep: order.status
+            ? Number(order.status.split("-")[0]) - 1
+            : 0,
+
+          sampleStatus: order.sample_status || "pending",
+          labStatus: order.lab_status || "processing",
+          resultStatus: order.result_status || "not_ready",
+        });
+      } catch (err) {
+        console.error(err);
+
+        if (err?.message === "Failed to fetch") {
+          setError("Unable to connect to the server.");
+        } else {
+          setError("Failed to load tracking information.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOrder();
+  }, [trackingId]);
 
   const scenarioKey = form?.scenario || "walkin";
   const scenario = scenarios[scenarioKey];
   const steps = scenario?.steps || [];
 
-  if (!existing || !form) {
+  if (loading) {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">Test not found</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          This Tracking ID does not exist in the system.
-        </p>
+        Loading tracking information...
+      </div>
+    );
+  }
+
+  if (error && !existing) {
+    return (
+      <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-bold">Unable to load test</h1>
+
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+
         <Link
           to="/admin/tests"
-          className="mt-6 inline-block rounded-xl bg-slate-900 px-4 py-3 text-white hover:bg-slate-800"
+          className="mt-6 inline-block rounded-xl bg-slate-900 px-4 py-3 text-white"
         >
-          Back to Tests
+          Back
         </Link>
       </div>
     );
@@ -61,48 +91,42 @@ export default function AdminEditTestPage() {
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(existing.trackingId);
+    navigator.clipboard.writeText(existing.tracking_id);
     setMsg("Tracking ID copied!");
     setTimeout(() => setMsg(""), 1200);
   }
 
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
+
     setMsg("");
     setError("");
+    setSaving(true);
 
-    if (!form.serialNumber?.trim()) {
-      setError("Serial Number is required.");
-      return;
+    try {
+      const payload = {
+        status: buildStatus(form.currentStep, form.scenario),
+        sample_status: form.sampleStatus,
+        lab_status: form.labStatus,
+        result_status: form.resultStatus,
+      };
+
+      const res = await updateOrderTracking(existing.id, payload);
+
+      if (res.status !== "success") {
+        setError(res.message || "Failed to save.");
+        return;
+      }
+
+      setMsg("Saved successfully!");
+      setTimeout(() => navigate("/admin/tests"), 600);
+    } catch (err) {
+      console.error(err);
+
+      setError("Unable to save changes. Please try again.");
+    } finally {
+      setSaving(false);
     }
-
-    if (!form.serialNumber.startsWith("SMA")) {
-      setError("Serial number must start with SMA");
-      return;
-    }
-
-    const res = updateTest(existing.trackingId, {
-      serialNumber: form.serialNumber,
-
-      // NEW SYSTEM
-      scenario: form.scenario,
-      currentStep: form.currentStep,
-
-      // OLD SYSTEM (temporary compatibility)
-      clientType: form.clientType,
-      sampleStatus: form.sampleStatus,
-      labStatus: form.labStatus,
-      resultStatus: form.resultStatus,
-      deliveryMethod: form.deliveryMethod,
-    });
-
-    if (!res.ok) {
-      setError(res.error || "Failed to save.");
-      return;
-    }
-
-    setMsg("Saved successfully!");
-    setTimeout(() => navigate("/admin/tests"), 600);
   }
 
   return (
@@ -138,13 +162,13 @@ export default function AdminEditTestPage() {
         <div className="mt-4 grid gap-2 text-sm">
           <div>
             <span className="text-slate-500">Tracking ID:</span>{" "}
-            <span className="font-semibold">{existing.trackingId}</span>
+            <span className="font-semibold">{existing.tracking_id}</span>
           </div>
           <div>
             <span className="text-slate-500">Last Updated:</span>{" "}
             <span className="font-semibold">
-              {existing.updatedAt
-                ? new Date(existing.updatedAt).toLocaleString()
+              {existing.updated_at
+                ? new Date(existing.updated_at).toLocaleString()
                 : "—"}
             </span>
           </div>
@@ -165,43 +189,16 @@ export default function AdminEditTestPage() {
         <h2 className="text-lg font-bold">Test Details</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="text-sm font-medium">Serial Number</label>
-            <input
-              value={form.serialNumber}
-              onChange={(e) => setField("serialNumber", e.target.value)}
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
-              placeholder="SMAXXXX"
-            />
-            <p className="mt-1 text-xs text-slate-500 ">
-              Client must enter this exact value when tracking.
-            </p>
-          </div>
-
           <div>
-            <label className="text-sm font-medium">Scenario</label>
+            <label className="text-sm font-medium">Client Type</label>
 
-            <select
-              value={form.scenario}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  scenario: e.target.value,
-                  currentStep: 0,
-                })
-              }
-              className="mt-2 w-full rounded-xl border px-4 py-3"
-            >
-              <option value="walkin">Walk-In Client</option>
-              <option value="walkin_kit_pickup">
-                Walk-In Client – Kit Pickup
-              </option>
-              <option value="home_service">Home Service Client</option>
-              <option value="kit_delivery">Kit Delivery Client</option>
-              <option value="partner_collection">
-                Sample Collection Center
-              </option>
-            </select>
+            <div className="mt-2 rounded-xl border bg-slate-50 px-4 py-3 text-slate-700">
+              {scenario?.name}
+            </div>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Client type cannot be changed after a test has been created.
+            </p>
           </div>
 
           <div>
@@ -219,31 +216,6 @@ export default function AdminEditTestPage() {
                   {index + 1} — {step}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Client Type</label>
-            <select
-              value={form.clientType}
-              onChange={(e) => setField("clientType", e.target.value)}
-              className="mt-2 w-full rounded-xl border px-4 py-3"
-            >
-              <option value="walkin">walkin</option>
-              <option value="kit">kit</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Delivery Method</label>
-            <select
-              value={form.deliveryMethod}
-              onChange={(e) => setField("deliveryMethod", e.target.value)}
-              className="mt-2 w-full rounded-xl border px-4 py-3"
-            >
-              <option value="pickup">pickup</option>
-              <option value="shipped">shipped</option>
-              <option value="email">email</option>
             </select>
           </div>
 
@@ -299,9 +271,10 @@ export default function AdminEditTestPage() {
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <button
             type="submit"
-            className="flex-1 rounded-xl bg-slate-900 px-4 py-3 font-medium text-white hover:bg-slate-800"
+            disabled={saving}
+            className="flex-1 rounded-xl bg-slate-900 px-4 py-3 font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </button>
 
           <Link

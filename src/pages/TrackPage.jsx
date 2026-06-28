@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { trackLookup } from "../services/testService";
+import { getOrderByTrackingId } from "../services/testService";
 
 export default function TrackPage() {
   const navigate = useNavigate();
@@ -8,15 +8,30 @@ export default function TrackPage() {
   const [trackingId, setTrackingId] = useState("");
   const [error, setError] = useState("");
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
     setError("");
 
-    const res = trackLookup(trackingId);
+    try {
+      const res = await getOrderByTrackingId(trackingId.trim());
 
-    if (!res.ok) {
-      setError(res.error);
-      return;
+      if (res.status !== "success") {
+        setError("Tracking ID not found");
+        return;
+      }
+
+      sessionStorage.setItem(
+        "dna_last_verified",
+        JSON.stringify({
+          trackingId: trackingId.trim(),
+        }),
+      );
+
+      navigate(`/status/${encodeURIComponent(trackingId.trim())}`);
+    } catch (err) {
+      console.error(err);
+
+      setError("Unable to fetch tracking information");
     }
 
     // store last verified contact so StatusPage can re-check
@@ -68,20 +83,6 @@ export default function TrackPage() {
           </p>
         </form>
       </div>
-
-      {/* <div className="mt-4 rounded-2xl border bg-white p-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-800">Demo data you can try:</p>
-        <ul className="mt-2 list-disc pl-5">
-          <li>
-            Tracking ID: <span className="font-medium">DNA-7X4P9LQ</span> •
-            Serial Number: <span className="font-medium">SMAXXXX</span>
-          </li>
-          <li>
-            Tracking ID: <span className="font-medium">DNA-2M7Q4T1</span> •
-            Serial Number: <span className="font-medium">SMAXXXX</span>
-          </li>
-        </ul>
-      </div> */}
     </div>
   );
 }

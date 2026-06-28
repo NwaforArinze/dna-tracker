@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../../services/authService";
+import { adminLogin } from "../../services/authService";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -9,14 +9,15 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+
     setError("");
 
-    const res = login(email, password);
+    const result = await adminLogin(email, password);
 
-    if (!res.ok) {
-      setError(res.error);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
 

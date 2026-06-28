@@ -1,15 +1,49 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-// import { scenarios } from "../config/scenarios";
-import { trackLookup } from "../services/testService";
+import { getOrderByTrackingId } from "../services/testService";
 import StatusTimeline from "../components/StatusTimeline";
+import { clientTypeMap, statusToStep } from "../utils/trackingMapper";
 
 export default function StatusPage() {
+  const [test, setTest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const { trackingId } = useParams();
 
   const session = JSON.parse(
     sessionStorage.getItem("dna_last_verified") || "null",
   );
-  const serialNumber = session?.serialNumber || "";
+
+  useEffect(() => {
+    async function fetchTracking() {
+      try {
+        const res = await getOrderByTrackingId(trackingId);
+
+        if (res.status !== "success") {
+          setError("Tracking ID not found");
+          return;
+        }
+
+        const apiData = res.data;
+
+        setTest({
+          trackingId: apiData.tracking_id,
+
+          scenario: clientTypeMap[apiData.client_type] || "walkin",
+
+          currentStep: statusToStep(apiData.status),
+        });
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load tracking information");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTracking();
+  }, [trackingId]);
 
   if (
     !session ||
@@ -31,29 +65,34 @@ export default function StatusPage() {
     );
   }
 
-  const res = trackLookup(trackingId, serialNumber);
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-xl p-6">
+        Loading tracking information...
+      </div>
+    );
+  }
 
-  if (!res.ok) {
+  if (error) {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">Unable to show status</h1>
+
         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {res.error}
+          {error}
         </div>
+
         <Link
           to="/track"
-          className="mt-6 inline-block rounded-xl bg-slate-900 px-4 py-3 text-white hover:bg-slate-800"
+          className="mt-6 inline-block rounded-xl bg-slate-900 px-4 py-3 text-white"
         >
-          Try again
+          Try Again
         </Link>
       </div>
     );
   }
 
-  const t = res.test;
-
-  // const scenarioKey = t.scenario || t.clientType || "walkin";
-  // const scenario = scenarios[scenarioKey];
+  const t = test;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -65,14 +104,6 @@ export default function StatusPage() {
             <span className="text-slate-500">Tracking ID:</span>{" "}
             <span className="font-semibold">{t.trackingId}</span>
           </div>
-          {/* <div>
-            <span className="text-slate-500">Client Type:</span>{" "}
-            <span className="font-semibold">{scenario.name}</span>
-          </div> */}
-          {/* <div>
-            <span className="text-slate-500">Delivery Method:</span>{" "}
-            <span className="font-semibold">{t.deliveryMethod}</span>
-          </div> */}
         </div>
       </div>
 

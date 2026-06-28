@@ -1,7 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { createTest, listTests, resetTests } from "../../services/testService";
-import { scenarios } from "../../config/scenarios";
+import {
+  createOrderTracking,
+  getAllOrderTrackings,
+} from "../../services/testService";
+// import { scenarios } from "../../config/scenarios";
+
+const CLIENT_TYPE_LABELS = {
+  walk_in_client: "Walk-In Client",
+  walk_in_client_kit_pickup: "Walk-In Client – Kit Pickup",
+  home_service_client: "Home Service Client",
+  kit_delivery_client: "Kit Delivery Client",
+  sample_collection_center: "Sample Collection Center",
+};
+
+function formatStatus(status) {
+  if (!status) return "No Status";
+
+  const [, name] = status.split("-");
+
+  return name
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getResultBadge(status) {
+  switch (status) {
+    case "released":
+      return "bg-blue-100 text-blue-700";
+
+    case "ready":
+      return "bg-green-100 text-green-700";
+
+    default:
+      return "bg-yellow-100 text-yellow-700";
+  }
+}
 
 export default function AdminTestsPage() {
   const [search, setSearch] = useState("");
@@ -12,32 +46,73 @@ export default function AdminTestsPage() {
   const [scenario, setScenario] = useState("walkin");
 
   // Create success state
-  const [created, setCreated] = useState(null); // { trackingId }
+  const [created, setCreated] = useState(null); // { id, trackingId }
 
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const tests = useMemo(() => {
-    void refreshKey;
-    return listTests();
+  const [tests, setTests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const loadTests = async () => {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      const res = await getAllOrderTrackings();
+
+      if (res.status !== "success") {
+        setLoadError(res.message || "Failed to load tests.");
+        return;
+      }
+
+      const sorted = [...(res.data || [])].sort(
+        (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
+      );
+
+      setTests(sorted);
+    } catch (err) {
+      console.error(err);
+      setLoadError("Unable to connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTests();
   }, [refreshKey]);
 
   const filteredTests = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return tests;
+
     return tests.filter(
       (t) =>
-        t.trackingId.toLowerCase().includes(search.toLowerCase()) ||
-        t.serialNumber?.toLowerCase().includes(search.toLowerCase()),
+        t.tracking_id?.toLowerCase().includes(term) ||
+        (t.client_contact || "").toLowerCase().includes(term) ||
+        CLIENT_TYPE_LABELS[t.client_type]?.toLowerCase().includes(term),
     );
   }, [tests, search]);
-  // const filtered = useMemo(() => {
-  //   const s = q.trim().toLowerCase();
-  //   if (!s) return tests;
-  //   return tests.filter((t) => t.trackingId.toLowerCase().includes(s));
-  // }, [q, tests]);
 
-  function handleReset() {
-    resetTests();
-    setRefreshKey((k) => k + 1);
-  }
+  const stats = useMemo(() => {
+    return {
+      total: tests.length,
+
+      processing: tests.filter((t) => t.lab_status === "processing").length,
+
+      completed: tests.filter((t) => t.lab_status === "completed").length,
+
+      ready: tests.filter((t) => t.result_status === "ready").length,
+
+      released: tests.filter((t) => t.result_status === "released").length,
+    };
+  }, [tests]);
 
   function openNew() {
     setShowNew(true);
@@ -47,30 +122,94 @@ export default function AdminTestsPage() {
   function closeNew() {
     setShowNew(false);
     setCreated(null);
+    setCreateError("");
     setContact("");
     setScenario("walkin");
   }
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
+    setCreateError("");
     e.preventDefault();
 
-    if (!contact.trim()) return;
-
-    const res = createTest({ contact, scenario });
-
-    if (res.ok) {
-      setCreated({ trackingId: res.test.trackingId });
-      setRefreshKey((k) => k + 1);
+    if (!contact.trim()) {
+      setCreateError("Phone number or email is required.");
+      return;
     }
+
+    setCreating(true);
+
+    try {
+      const res = await createOrderTracking({
+        contact,
+        scenario,
+      });
+
+      if (res.status !== "success") {
+        setCreateError(res.message || "Unable to create tracking.");
+        return;
+      }
+
+      setCreated({
+        id: res.data.id,
+        trackingId: res.data.tracking_id,
+      });
+
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error(err);
+      setCreateError("Network error. Please try again.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadTests();
+    setRefreshing(false);
   }
 
   async function copy(text) {
     await navigator.clipboard.writeText(text);
+
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 1500);
   }
 
+  function formatDate(date) {
+    if (!date) return "—";
+
+    return new Date(date).toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-80 items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900"></div>
+
+          <p className="mt-4 text-slate-500">Loading tests...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4">
       {/* Header */}
+      {loadError && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -82,37 +221,78 @@ export default function AdminTestsPage() {
 
           <div className="flex gap-2">
             <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+            >
+              {refreshing ? "⟳ Refreshing..." : "↻ Refresh"}
+            </button>
+
+            <button
               onClick={openNew}
               className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
               type="button"
             >
               + New Test
             </button>
-
-            <button
-              onClick={handleReset}
-              className="rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
-              type="button"
-              title="Reset demo data"
-            >
-              Reset demo
-            </button>
           </div>
         </div>
 
         <div className="mt-4">
           <input
+            autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Tracking ID..."
+            placeholder="Search by Tracking ID, contact or client type..."
             className="w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
           />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Total Tests</p>
+          <h2 className="mt-2 text-3xl font-bold">{stats.total}</h2>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Lab Processing</p>
+          <h2 className="mt-2 text-3xl font-bold text-amber-600">
+            {stats.processing}
+          </h2>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Lab Completed</p>
+          <h2 className="mt-2 text-3xl font-bold text-blue-600">
+            {stats.completed}
+          </h2>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Results Ready</p>
+          <h2 className="mt-2 text-3xl font-bold text-green-600">
+            {stats.ready}
+          </h2>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Results Released</p>
+          <h2 className="mt-2 text-3xl font-bold text-purple-600">
+            {stats.released}
+          </h2>
         </div>
       </div>
 
       {/* Table */}
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="overflow-auto">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Showing {filteredTests.length} of {tests.length} tests
+            </p>
+          </div>
           <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="text-slate-500">
               <tr className="border-b">
@@ -121,56 +301,46 @@ export default function AdminTestsPage() {
                 <th className="py-3 pr-3">Step</th>
                 <th className="py-3 pr-3">Last Updated</th>
                 <th className="py-3 pr-3">Result</th>
-                <th className="py-3 pr-3">Delivery</th>
+
                 <th className="py-3 pr-3">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {filteredTests.map((t) => {
-                const scenario = scenarios[t.scenario] || {};
-                const stepLabel = scenario.steps?.[t.currentStep] || "—";
-
-                const resultStatus =
-                  t.currentStep >= (scenario.steps?.length || 1) - 1
-                    ? "Ready"
-                    : "Not ready";
-
+                const currentStep = t.status
+                  ? parseInt(t.status.split("-")[0], 10)
+                  : "-";
                 return (
-                  <tr key={t.trackingId} className="border-t">
-                    <td className="py-3 font-medium">{t.trackingId}</td>
-
-                    <td>{scenario.name || "—"}</td>
+                  <tr key={t.id} className="border-t">
+                    <td className="py-3 font-medium">{t.tracking_id}</td>
 
                     <td>
-                      Step {t.currentStep + 1}
-                      <div className="text-xs text-slate-500">{stepLabel}</div>
+                      {CLIENT_TYPE_LABELS[t.client_type] || t.client_type}
                     </td>
 
-                    <td className="py-3 pr-3">
-                      {t.updatedAt
-                        ? new Date(t.updatedAt).toLocaleDateString()
-                        : "—"}
+                    <td>
+                      Step {currentStep}
+                      <div className="text-xs text-slate-500">
+                        {formatStatus(t.status)}
+                      </div>
                     </td>
+
+                    <td className="py-3 pr-3">{formatDate(t.updated_at)}</td>
 
                     <td>
                       <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full
-            ${
-              resultStatus === "Ready"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${getResultBadge(
+                          t.result_status,
+                        )}`}
                       >
-                        {resultStatus}
+                        {(t.result_status || "not_ready").replace("_", " ")}
                       </span>
                     </td>
 
-                    <td>Email</td>
-
                     <td>
                       <Link
-                        to={`/admin/tests/${t.trackingId}`}
+                        to={`/admin/tests/${t.id}`}
                         className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50"
                       >
                         Edit
@@ -181,8 +351,14 @@ export default function AdminTestsPage() {
               })}
             </tbody>
           </table>
-          {filteredTests.length === 0 && (
-            <p className="text-sm text-gray-500 mt-4">No tests found.</p>
+          {!loadError && filteredTests.length === 0 && (
+            <div className="py-10 text-center">
+              <h3 className="font-semibold">No matching tests</h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Try another tracking ID, client type or contact.
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -195,6 +371,12 @@ export default function AdminTestsPage() {
               <h2 className="text-lg font-bold">
                 {created ? "Test Created" : "Create New Test"}
               </h2>
+
+              {createError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {createError}
+                </div>
+              )}
 
               <button
                 onClick={closeNew}
@@ -220,11 +402,11 @@ export default function AdminTestsPage() {
                       className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
                       type="button"
                     >
-                      Copy ID
+                      {copied ? "Copied!" : "Copy ID"}
                     </button>
 
                     <Link
-                      to={`/admin/tests/${encodeURIComponent(created.trackingId)}`}
+                      to={`/admin/tests/${created.id}`}
                       className="rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
                       onClick={closeNew}
                     >
@@ -236,6 +418,7 @@ export default function AdminTestsPage() {
                 <button
                   onClick={() => {
                     setCreated(null);
+                    setCreateError("");
                     setContact("");
                     setScenario("walkin");
                   }}
@@ -290,13 +473,15 @@ export default function AdminTestsPage() {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-white hover:bg-slate-800"
+                    disabled={creating}
+                    className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Create
+                    {creating ? "Creating..." : "Create"}
                   </button>
                   <button
                     type="button"
                     onClick={closeNew}
+                    disabled={creating}
                     className="flex-1 rounded-xl border px-4 py-3 hover:bg-slate-50"
                   >
                     Cancel
