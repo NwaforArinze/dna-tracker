@@ -12,8 +12,20 @@ export default function TrackPage() {
     e.preventDefault();
     setError("");
 
+    const id = trackingId.trim();
+
+    if (!id) {
+      setError("Please enter your Tracking ID.");
+      return;
+    }
+
+    if (!id.toUpperCase().startsWith("DNA")) {
+      setError("Tracking ID should start with DNA.");
+      return;
+    }
+
     try {
-      const res = await getOrderByTrackingId(trackingId.trim());
+      const res = await getOrderByTrackingId(id);
 
       if (res.status !== "success") {
         setError("Tracking ID not found");
@@ -23,26 +35,16 @@ export default function TrackPage() {
       sessionStorage.setItem(
         "dna_last_verified",
         JSON.stringify({
-          trackingId: trackingId.trim(),
+          trackingId: id,
         }),
       );
 
-      navigate(`/status/${encodeURIComponent(trackingId.trim())}`);
+      navigate(`/status/${encodeURIComponent(id)}`);
     } catch (err) {
       console.error(err);
 
       setError("Unable to fetch tracking information");
     }
-
-    // store last verified contact so StatusPage can re-check
-    sessionStorage.setItem(
-      "dna_last_verified",
-      JSON.stringify({
-        trackingId: String(trackingId || "").trim(),
-      }),
-    );
-
-    navigate(`/status/${encodeURIComponent(trackingId.trim())}`);
   }
 
   return (
@@ -58,7 +60,10 @@ export default function TrackPage() {
             <label className="text-sm font-medium">Tracking ID</label>
             <input
               value={trackingId}
-              onChange={(e) => setTrackingId(e.target.value)}
+              onChange={(e) => {
+                setTrackingId(e.target.value);
+                setError("");
+              }}
               placeholder="Enter Tracking ID"
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-slate-400"
             />

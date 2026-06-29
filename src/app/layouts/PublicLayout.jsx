@@ -8,6 +8,12 @@ export default function PublicLayout() {
           <Link to="/" className="text-lg font-bold">
             <img src="/smartdnalogo.webp" width={150} alt="" />
           </Link>
+          <Link
+            to="https://smartdna.com.ng"
+            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            <button>← back to smartdna.com.ng</button>
+          </Link>
         </div>
       </header>
 
