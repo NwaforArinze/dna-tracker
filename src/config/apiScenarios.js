@@ -17,7 +17,7 @@ export function buildStatus(stepIndex, scenarioKey) {
       "6-sample_dispatched_to_laboratory",
       "7-sample_received_by_laboratory",
       "8-laboratory_analysis_in_progress",
-      "9-laboratory_analysis_completed",
+      "9-test_report_ready",
       "10-result_sent_to_provided_email",
     ],
 
@@ -31,7 +31,7 @@ export function buildStatus(stepIndex, scenarioKey) {
       "7-sample_dispatched_to_laboratory",
       "8-sample_received_by_laboratory",
       "9-laboratory_analysis_in_progress",
-      "10-laboratory_analysis_completed",
+      "10-test_report_ready",
       "11-result_sent_to_provided_email",
     ],
 
@@ -43,7 +43,7 @@ export function buildStatus(stepIndex, scenarioKey) {
       "5-sample_dispatched_to_laboratory",
       "6-sample_received_by_laboratory",
       "7-laboratory_analysis_in_progress",
-      "8-laboratory_analysis_completed",
+      "8-test_report_ready",
       "9-result_sent_to_provided_email",
     ],
 
@@ -58,7 +58,7 @@ export function buildStatus(stepIndex, scenarioKey) {
       "8-sample_dispatched_to_laboratory",
       "9-sample_received_by_laboratory",
       "10-laboratory_analysis_in_progress",
-      "11-laboratory_analysis_completed",
+      "11-test_report_ready",
       "12-result_sent_to_provided_email",
     ],
 
@@ -73,7 +73,7 @@ export function buildStatus(stepIndex, scenarioKey) {
       "8-sample_dispatched_to_laboratory",
       "9-sample_received_by_laboratory",
       "10-laboratory_analysis_in_progress",
-      "11-laboratory_analysis_completed",
+      "11-test_report_ready",
       "12-result_sent_to_provided_email",
     ],
   };
