@@ -57,13 +57,14 @@ export default function AdminTestsPage() {
   const [createError, setCreateError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pagination, setPagination] = useState(null);
 
-  const loadTests = async () => {
+  const loadTests = async (page = 1) => {
     setLoading(true);
     setLoadError("");
 
     try {
-      const res = await getAllOrderTrackings();
+      const res = await getAllOrderTrackings(page);
 
       if (res.status !== "success") {
         setLoadError(res.message || "Failed to load tests.");
@@ -75,6 +76,7 @@ export default function AdminTestsPage() {
       );
 
       setTests(sorted);
+      setPagination(res.pagination);
     } catch (err) {
       console.error(err);
       setLoadError("Unable to connect to the server.");
@@ -165,7 +167,7 @@ export default function AdminTestsPage() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadTests();
+    await loadTests(pagination?.current_page || 1);
     setRefreshing(false);
   }
 
@@ -253,7 +255,9 @@ export default function AdminTestsPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Total Tests</p>
-          <h2 className="mt-2 text-3xl font-bold">{stats.total}</h2>
+          <h2 className="mt-2 text-3xl font-bold">
+            {pagination?.total ?? stats.total}
+          </h2>
         </div>
 
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
@@ -358,6 +362,29 @@ export default function AdminTestsPage() {
               <p className="mt-1 text-sm text-slate-500">
                 Try another tracking ID, client type or contact.
               </p>
+            </div>
+          )}
+          {pagination && (
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                type="button"
+                disabled={!pagination.prev_page_url}
+                onClick={() => loadTests(pagination.current_page - 1)}
+                className="rounded-lg border px-4 py-2 disabled:opacity-40"
+              >
+                Previous
+              </button>
+
+              <span className="text-sm">Page {pagination.current_page}</span>
+
+              <button
+                type="button"
+                disabled={!pagination.next_page_url}
+                onClick={() => loadTests(pagination.current_page + 1)}
+                className="rounded-lg border px-4 py-2 disabled:opacity-40"
+              >
+                Next
+              </button>
             </div>
           )}
         </div>

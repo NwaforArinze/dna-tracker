@@ -23,8 +23,8 @@ export async function updateOrderTracking(id, payload) {
   });
 }
 
-export async function getAllOrderTrackings() {
-  return await apiRequest("/order");
+export async function getAllOrderTrackings(page = 1) {
+  return await apiRequest(`/order?page=${page}`);
 }
 
 export async function getOrderById(id) {
